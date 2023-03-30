@@ -4,7 +4,7 @@
  *
  * @author Qiang Xue <qiang.xue@gmail.com>
  * @link https://www.yiiframework.com/
- * @copyright 2008-2013 Yii Software LLC
+ * @copyright 2008-2013 &Copy Yii Software LLC
  * @license https://www.yiiframework.com/license/
  */
 
@@ -25,6 +25,7 @@
  * satisfying both filter conditions will they be returned.
  *
  * @author Qiang Xue <qiang.xue@gmail.com>
+ * @version $Id$
  * @package system.logging
  * @since 1.0
  */
@@ -39,23 +40,15 @@ abstract class CLogRoute extends CComponent
 	 */
 	public $levels='';
 	/**
-	 * @var mixed array of categories, or string list separated by comma or space. 
-	 * Defaults to empty array, meaning all categories.
+	 * @var string list of categories separated by comma or space. Defaults to empty, meaning all categories.
 	 */
-	public $categories=array();
-	/**
-	 * @var mixed array of categories, or string list separated by comma or space, to EXCLUDE from logs.
-	 * Defaults to empty array, meaning no categories are excluded.
-	 * This will exclude any categories after $categories has been ran.
-	 */
-	public $except=array();
+	public $categories='';
 	/**
 	 * @var mixed the additional filter (eg {@link CLogFilter}) that can be applied to the log messages.
 	 * The value of this property will be passed to {@link Yii::createComponent} to create
 	 * a log filter object. As a result, this can be either a string representing the
 	 * filter class name or an array representing the filter configuration.
-	 * In general, the log filter class should implement {@link ILogFilter} interface.
-	 * If you want to apply multiple filters you can use {@link CChainedLogFilter} to do so.
+	 * In general, the log filter class should be {@link CLogFilter} or a child class of it.
 	 * Defaults to null, meaning no filter will be used.
 	 */
 	public $filter;
@@ -63,7 +56,12 @@ abstract class CLogRoute extends CComponent
 	 * @var array the logs that are collected so far by this log route.
 	 * @since 1.1.0
 	 */
-	public $logs=array();
+	public $logs;
+
+	/**
+	 * RepairQ end-user-viewable and grep-able reference string to include both in displayed & logged error messages
+	 */
+	static public $RQref;
 
 
 	/**
@@ -72,6 +70,9 @@ abstract class CLogRoute extends CComponent
 	 */
 	public function init()
 	{
+		if (!isset(self::$RQref)) {
+			self::$RQref = bin2hex(openssl_random_pseudo_bytes(8));
+		}
 	}
 
 	/**
@@ -94,14 +95,13 @@ abstract class CLogRoute extends CComponent
 	 */
 	public function collectLogs($logger, $processLogs=false)
 	{
-		$logs=$logger->getLogs($this->levels,$this->categories,$this->except);
+		$logs=$logger->getLogs($this->levels,$this->categories);
 		$this->logs=empty($this->logs) ? $logs : array_merge($this->logs,$logs);
 		if($processLogs && !empty($this->logs))
 		{
 			if($this->filter!==null)
 				Yii::createComponent($this->filter)->filter($this->logs);
-			if($this->logs!==array())
-				$this->processLogs($this->logs);
+			$this->processLogs($this->logs);
 			$this->logs=array();
 		}
 	}
